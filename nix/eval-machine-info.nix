@@ -1,4 +1,6 @@
 { system ? builtins.currentSystem
+, nixpkgs ? <nixpkgs>
+, pkgs ? import nixpkgs { inherit system; }
 , networkExprs
 , checkConfigurationOptions ? true
 , uuid
@@ -7,7 +9,7 @@
 , pluginNixExprs
 }:
 
-with import <nixpkgs> { inherit system; };
+with pkgs;
 with lib;
 
 
@@ -52,7 +54,7 @@ rec {
           networks;
       in
       { name = machineName;
-        value = import <nixpkgs/nixos/lib/eval-config.nix> {
+        value = import (pkgs.path + "/nixos/lib/eval-config.nix") {
           modules =
             modules ++
             defaults ++
