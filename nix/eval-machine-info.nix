@@ -138,46 +138,46 @@ rec {
       resources' = resources;
     in rec {
 
-    machines =
-      flip mapAttrs nodes (n: v': let v = scrubOptionValue v'; in
-      foldr (a: b: a // b)
-        { inherit (v.deployment) targetEnv targetPort targetHost encryptedLinksTo storeKeysOnMachine alwaysActivate owners keys hasFastConnection;
+      machines =
+        flip mapAttrs nodes (n: v': let
+          v = scrubOptionValue v';
+
+        in foldr (a: b: a // b) {
+          inherit (v.deployment) targetEnv targetPort targetHost encryptedLinksTo storeKeysOnMachine alwaysActivate owners keys hasFastConnection;
           nixosRelease = v.system.nixos.release or v.system.nixosRelease or (removeSuffix v.system.nixosVersionSuffix v.system.nixosVersion);
           publicIPv4 = v.networking.publicIPv4;
-        }
-      (map
-        (f: f v)
-        pluginDeploymentConfigExporters
-      ));
+        } (map (f: f v) pluginDeploymentConfigExporters));
 
     # network = fold (as: bs: as // bs) {} (network'.network or []);
     inherit (network') network;
 
-    resources =
-    let
-      resource_referenced = list: check: recurse:
-          any id (map (value: (check value) ||
-                              ((isAttrs value) && (!(value ? _type) || recurse)
-                                               && (resource_referenced (attrValues value) check false)))
-                      list);
+    resources = removeAttrs resources' [ "machines" ];
 
-      flatten_resources = resources: flatten ( map attrValues (attrValues resources) );
+    # resources =
+    # let
+    #   resource_referenced = list: check: recurse:
+    #       any id (map (value: (check value) ||
+    #                           ((isAttrs value) && (!(value ? _type) || recurse)
+    #                                            && (resource_referenced (attrValues value) check false)))
+    #                   list);
 
-      resource_used = res_set: resource:
-          resource_referenced
-              ((flatten_resources res_set) ++ (attrValues azure_machines))
-              (value: value == resource )
-              true;
+    #   flatten_resources = resources: flatten ( map attrValues (attrValues resources) );
 
-      resources_without_defaults = res_class: defaults: res_set:
-        let
-          missing = filter (res: !(resource_used (removeAttrs res_set [res_class])
-                                                  res_set."${res_class}"."${res}"))
-                           (attrNames defaults);
-        in
-        res_set // { "${res_class}" = ( removeAttrs res_set."${res_class}" missing ); };
+    #   resource_used = res_set: resource:
+    #       resource_referenced
+    #           ((flatten_resources res_set) ++ (attrValues azure_machines))
+    #           (value: value == resource )
+    #           true;
 
-    in (removeAttrs resources' [ "machines" ]);
+    #   resources_without_defaults = res_class: defaults: res_set:
+    #     let
+    #       missing = filter (res: !(resource_used (removeAttrs res_set [res_class])
+    #                                               res_set."${res_class}"."${res}"))
+    #                        (attrNames defaults);
+    #     in
+    #     res_set // { "${res_class}" = ( removeAttrs res_set."${res_class}" missing ); };
+
+    # in (removeAttrs resources' [ "machines" ]);
 
   };
 
