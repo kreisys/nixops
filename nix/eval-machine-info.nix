@@ -22,11 +22,9 @@ with lib;
 rec {
   inherit pluginNixExprs networkExprs;
 
-  importedPluginNixExprs = map
-    (expr: import expr)
-    pluginNixExprs;
-  pluginOptions = { imports = (foldl (a: e: a ++ e.options) [] importedPluginNixExprs); };
-  pluginResources = map (e: e.resources) importedPluginNixExprs;
+  importedPluginNixExprs          = map (expr: import expr) pluginNixExprs;
+  pluginResources                 = map (e: e.resources) importedPluginNixExprs;
+  pluginOptions                   = { imports = (foldl (a: e: a ++ e.options) [] importedPluginNixExprs); };
   pluginDeploymentConfigExporters = (foldl (a: e: a ++ (e.config_exporters { inherit optionalAttrs pkgs; })) [] importedPluginNixExprs);
 
   network = let
@@ -38,7 +36,7 @@ rec {
       {
         _module.args = {
           inherit pkgs baseModules pluginOptions pluginResources deploymentName args uuid pluginDeploymentConfigExporters;
-        };
+        } // args;
       }
     ] ++ networkExprs;
   }).config;
