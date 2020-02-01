@@ -1,9 +1,10 @@
-{ system ? builtins.currentSystem
-, nixpkgs ? ~/src/nixpkgs-channels
-, nixops ? (import ../release.nix { nixpkgs = pkgs.path; p = (p: [
-  (p.callPackage ../../nixops-aws/release.nix { officialRelease = true; })
+{ system  ? builtins.currentSystem
+, nixpkgs ? <nixpkgs>
+, pkgs    ? import nixpkgs { inherit system; }
+, nixops  ? (import ../release.nix { nixpkgs = pkgs.path; p = (p: [
+  # (p.callPackage ../../nixops-aws/release.nix { officialRelease = true; })
+    p.aws
   ]); }).build.${system}
-, pkgs ? import nixpkgs { inherit system; }
 , networkExprs
 , checkConfigurationOptions ? true
 , uuid
