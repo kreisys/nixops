@@ -78,7 +78,7 @@ class MachineState(nixops.resources.ResourceState):
         self._ssh_private_key_file = None
 
     def prefix_definition(self, attr):
-        return attr
+        return {('nodes'): attr}
 
     @property
     def started(self):
