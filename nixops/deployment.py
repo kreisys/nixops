@@ -650,6 +650,7 @@ class Deployment(object):
                 with open(remote_machines_file, "w") as f:
                     f.write("".join(remote_machines))
                 os.environ['NIX_REMOTE_SYSTEMS'] = remote_machines_file
+                self.logger.log("using generated remote systems file: {0}".format(os.environ['NIX_REMOTE_SYSTEMS']))
             else:
                 self.logger.log("using predefined remote systems file: {0}".format(os.environ['NIX_REMOTE_SYSTEMS']))
 

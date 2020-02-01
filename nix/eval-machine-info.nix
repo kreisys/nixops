@@ -1,6 +1,8 @@
 { system ? builtins.currentSystem
-, nixpkgs ? <nixpkgs>
-, nixops ? (import ../release.nix { nixpkgs = pkgs.path; p = (p: [ (p.callPackage ../../nixops-aws/release.nix { officialRelease = true; }) ]); }).build.${system}
+, nixpkgs ? ~/src/nixpkgs-channels
+, nixops ? (import ../release.nix { nixpkgs = pkgs.path; p = (p: [
+  (p.callPackage ../../nixops-aws/release.nix { officialRelease = true; })
+  ]); }).build.${system}
 , pkgs ? import nixpkgs { inherit system; }
 , networkExprs
 , checkConfigurationOptions ? true
@@ -27,21 +29,6 @@ rec {
   pluginResources = map (e: e.resources) importedPluginNixExprs;
   pluginDeploymentConfigExporters = (foldl (a: e: a ++ (e.config_exporters { inherit optionalAttrs pkgs; })) [] importedPluginNixExprs);
 
-  # networks =
-  #   let
-  #     getNetworkFromExpr = networkExpr:
-  #       (call (import networkExpr)) // { _file = networkExpr; };
-
-  #     exprToKey = key: { key = toString key; };
-
-  #     networkExprClosure = builtins.genericClosure {
-  #       startSet = map exprToKey networkExprs;
-  #       operator = { key }: map exprToKey ((getNetworkFromExpr key).require or []);
-  #     };
-  #   in map ({ key }: getNetworkFromExpr key) networkExprClosure;
-
-  # call = x: if builtins.isFunction x then x args else x;
-
   network = let
     baseModules = import (nixpkgs + "/nixos/modules/module-list.nix");
 
@@ -50,86 +37,13 @@ rec {
       ./network.nix
       {
         _module.args = {
-          inherit pkgs baseModules pluginOptions pluginResources deploymentName args uuid;
+          inherit pkgs baseModules pluginOptions pluginResources deploymentName args uuid pluginDeploymentConfigExporters;
         };
       }
     ] ++ networkExprs;
-    # specialArgs = { inherit baseModules pluginOptions; };
   }).config;
-  # .config [
-  #   (this: this.nodes // {
-  #     inherit (this) defaults network resources;
 
-  #     require = this.requires;
-  #   })
-
-  #   (filterAttrs (_: v: v != null))
-  # ];
-
-  # network = zipAttrs networks;
-
-  # defaults = network.defaults or {};
   inherit (network) defaults nodes resources;
-
-  # Compute the definitions of the machines.
-  # nodes =
-  #   listToAttrs (map (machineName:
-  #     let
-  #       # Get the configuration of this machine from each network
-  #       # expression, attaching _file attributes so the NixOS module
-  #       # system can give sensible error messages.
-  #       modules =
-  #         concatMap (n: optional (hasAttr machineName n)
-  #           { imports = [(getAttr machineName n)]; inherit (n) _file; })
-  #         networks;
-  #     in
-  #     { name = machineName;
-  #       value = import (pkgs.path + "/nixos/lib/eval-config.nix") {
-  #         modules =
-  #           modules ++
-  #           defaults ++
-  #           [ deploymentInfoModule ] ++
-  #           [ { key = "nixops-stuff";
-  #               # Make NixOps's deployment.* options available.
-  #         imports = [ ./options.nix ./resource.nix pluginOptions ];
-  #               # Provide a default hostname and deployment target equal
-  #               # to the attribute name of the machine in the model.
-  #               networking.hostName = mkOverride 900 machineName;
-  #               deployment.targetHost = mkOverride 900 machineName;
-  #               environment.checkConfigurationOptions = mkOverride 900 checkConfigurationOptions;
-  #             }
-  #           ];
-  #         extraArgs = { inherit nodes resources uuid deploymentName; name = machineName; };
-  #       };
-  #     }
-  #   ) (attrNames (removeAttrs network [ "network" "defaults" "resources" "require" "_file" ])));
-
-  # Compute the definitions of the non-machine resources.
-  # resourcesByType = zipAttrs (network.resources or []);
-
-  # deploymentInfoModule = {
-  #   deployment = {
-  #     name = deploymentName;
-  #     arguments = args;
-  #     inherit uuid;
-  #   };
-  # };
-
-  # evalResources = mainModule: _resources:
-  #   mapAttrs (name: defs:
-  #     (builtins.removeAttrs (fixMergeModules
-  #       ([ mainModule deploymentInfoModule ./resource.nix ] ++ defs)
-  #       { inherit pkgs uuid name resources; nodes = info.machines; }
-  #     ).config) ["_module"]) _resources;
-
-  # resources = foldl
-  #   (a: b: a // (b { inherit evalResources zipAttrs resourcesByType;}))
-  #   {
-  #     sshKeyPairs = evalResources ./ssh-keypair.nix (zipAttrs resourcesByType.sshKeyPairs or []);
-  #     commandOutput = evalResources ./command-output.nix (zipAttrs resourcesByType.commandOutput or []);
-  #     machines = mapAttrs (n: v: v.config) nodes;
-  #   }
-  #   pluginResources;
 
   # Phase 1: evaluate only the deployment attributes.
   info =
@@ -148,50 +62,23 @@ rec {
           publicIPv4 = v.networking.publicIPv4;
         } (map (f: f v) pluginDeploymentConfigExporters));
 
-    # network = fold (as: bs: as // bs) {} (network'.network or []);
     inherit (network') network;
 
     resources = removeAttrs resources' [ "machines" ];
-
-    # resources =
-    # let
-    #   resource_referenced = list: check: recurse:
-    #       any id (map (value: (check value) ||
-    #                           ((isAttrs value) && (!(value ? _type) || recurse)
-    #                                            && (resource_referenced (attrValues value) check false)))
-    #                   list);
-
-    #   flatten_resources = resources: flatten ( map attrValues (attrValues resources) );
-
-    #   resource_used = res_set: resource:
-    #       resource_referenced
-    #           ((flatten_resources res_set) ++ (attrValues azure_machines))
-    #           (value: value == resource )
-    #           true;
-
-    #   resources_without_defaults = res_class: defaults: res_set:
-    #     let
-    #       missing = filter (res: !(resource_used (removeAttrs res_set [res_class])
-    #                                               res_set."${res_class}"."${res}"))
-    #                        (attrNames defaults);
-    #     in
-    #     res_set // { "${res_class}" = ( removeAttrs res_set."${res_class}" missing ); };
-
-    # in (removeAttrs resources' [ "machines" ]);
-
   };
 
   # Phase 2: build complete machine configurations.
-  machines = { names }:
-    let nodes' = filterAttrs (n: v: elem n names) nodes; in
-    runCommand "nixops-machines"
-      { preferLocalBuild = true; }
-      ''
-        mkdir -p $out
-        ${toString (attrValues (mapAttrs (n: v: ''
-          ln -s ${v.config.system.build.toplevel} $out/${n}
-        '') nodes'))}
-      '';
+  machines = { names }: let
+    nodes' = filterAttrs (n: v: elem n names) nodes;
+
+  in runCommand "nixops-machines" {
+    preferLocalBuild = true;
+  } ''
+    mkdir -p $out
+    ${toString (attrValues (mapAttrs (n: v: ''
+      ln -s ${v.system.build.toplevel} $out/${n}
+    '') nodes'))}
+  '';
 
 
   # Function needed to calculate the nixops arguments. This should work even when arguments
