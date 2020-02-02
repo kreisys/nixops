@@ -36,12 +36,15 @@ rec {
       ./network.nix
       {
         _module.args = {
-          inherit pkgs baseModules pluginOptions pluginResources deploymentName uuid pluginDeploymentConfigExporters;
-        };
+          inherit args pkgs baseModules pluginOptions pluginResources deploymentName uuid pluginDeploymentConfigExporters;
+        } // args;
       }
     ] ++ (map (e: let
       call = f: if isFunction f then f args else f;
-    in (call (import e)) // { _file = e; } ) networkExprs);
+    in {
+      _file = e;
+      imports = [ (call (import e)) ];
+    }) networkExprs);
   }).config;
 
   inherit (network) defaults nodes resources;
