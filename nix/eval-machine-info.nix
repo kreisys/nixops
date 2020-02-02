@@ -36,7 +36,7 @@ rec {
       ./network.nix
       {
         _module.args = {
-          inherit pkgs baseModules pluginOptions pluginResources deploymentName args uuid pluginDeploymentConfigExporters;
+          inherit pkgs baseModules pluginOptions pluginResources deploymentName uuid pluginDeploymentConfigExporters;
         };
       }
     ] ++ networkExprs;
