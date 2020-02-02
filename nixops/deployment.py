@@ -320,13 +320,14 @@ class Deployment(object):
     def evaluate_config(self, attr):
         try:
             # FIXME: use --json
-            xml = subprocess.check_output(
-                ["nix-instantiate"]
-                + self.extra_nix_eval_flags
-                + self._eval_flags(self.nix_exprs) +
-                ["--eval-only", "--xml", "--strict",
-                 "--arg", "checkConfigurationOptions", "false",
-                 "-A", attr], stderr=self.logger.log_file)
+            cmd = (["nix-instantiate"]
+                   + self.extra_nix_eval_flags
+                   + self._eval_flags(self.nix_exprs)
+                   + ["--eval-only", "--xml", "--strict",
+                      "--arg", "checkConfigurationOptions", "false",
+                      "-A", attr])
+            if debug: print >> sys.stderr, "Executing: {0}\n".format(' '.join(cmd))
+            xml = subprocess.check_output(cmd, stderr=self.logger.log_file)
             if debug: print >> sys.stderr, "XML output of nix-instantiate:\n" + xml
         except OSError as e:
             raise Exception("unable to run ‘nix-instantiate’: {0}".format(e))
