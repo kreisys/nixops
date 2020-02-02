@@ -636,9 +636,9 @@ class Deployment(object):
         # If we're not running on Linux, then perform the build on the
         # target machines.  FIXME: Also enable this if we're on 32-bit
         # and want to deploy to 64-bit.
-        if platform.system() != 'Linux' and os.environ.get('NIX_REMOTE') != 'daemon':
+        remote_machines = []
+        if not dry_run and platform.system() != 'Linux' and os.environ.get('NIX_REMOTE') != 'daemon':
             if os.environ.get('NIX_REMOTE_SYSTEMS') == None:
-                remote_machines = []
                 for m in sorted(selected, key=lambda m: m.index):
                     key_file = m.get_ssh_private_key_file()
                     if not key_file: raise Exception("do not know private SSH key for machine ‘{0}’".format(m.name))
@@ -646,10 +646,6 @@ class Deployment(object):
                     remote_machines.append("root@{0} {1} {2} 2 1\n".format(m.get_ssh_name(), 'i686-linux,x86_64-linux', key_file))
                     # Use only a single machine for now (issue #103).
                     break
-                remote_machines_file = "{0}/nix.machines".format(self.tempdir)
-                with open(remote_machines_file, "w") as f:
-                    f.write("".join(remote_machines))
-                os.environ['NIX_REMOTE_SYSTEMS'] = remote_machines_file
             else:
                 self.logger.log("using predefined remote systems file: {0}".format(os.environ['NIX_REMOTE_SYSTEMS']))
 
@@ -667,6 +663,7 @@ class Deployment(object):
                 + self._eval_flags(self.nix_exprs + [phys_expr]) +
                 ["--arg", "names", py2nix(names, inline=True),
                  "-A", "machines", "-o", self.tempdir + "/configs"]
+                + ([ "--option", "builders", "".join(remote_machines)] if remote_machines != [] else [])
                 + (["--dry-run"] if dry_run else [])
                 + (["--repair"] if repair else []),
                 stderr=self.logger.log_file).rstrip()
