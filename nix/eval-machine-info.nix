@@ -39,7 +39,9 @@ rec {
           inherit pkgs baseModules pluginOptions pluginResources deploymentName uuid pluginDeploymentConfigExporters;
         };
       }
-    ] ++ networkExprs;
+    ] ++ (map (e: let
+      call = f: if isFunction f then f args else f;
+    in (call (import e)) // { _file = e; } ) networkExprs);
   }).config;
 
   inherit (network) defaults nodes resources;
