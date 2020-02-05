@@ -31,6 +31,16 @@ rec {
   network = let
     baseModules = import (pkgs.path + "/nixos/modules/module-list.nix");
 
+    call = e: rec {
+      lambda = e args;
+      set    = e;
+      path   = string;
+      string = {
+        _file = e;
+        imports = [ (call (import e)) ];
+      };
+    }.${builtins.typeOf e};
+
   in (evalModules {
     modules = [
       ./network.nix
@@ -39,12 +49,7 @@ rec {
           inherit args pkgs baseModules pluginOptions pluginResources deploymentName uuid pluginDeploymentConfigExporters;
         } // args;
       }
-    ] ++ (map (e: let
-      call = f: if isFunction f then f args else f;
-    in {
-      _file = e;
-      imports = [ (call (import e)) ];
-    }) networkExprs);
+    ] ++ (map call networkExprs);
   }).config;
 
   inherit (network) defaults nodes resources;
