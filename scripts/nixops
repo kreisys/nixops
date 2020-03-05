@@ -13,6 +13,7 @@ parser.add_argument('--version', action='version', version='NixOps @version@')
 subparsers = parser.add_subparsers(help='sub-command help')
 
 subparser = add_subparser(subparsers, 'list', help='list all known deployments')
+subparser.add_argument('--plain',  action='store_true', help='do not pretty-print the output')
 subparser.set_defaults(op=op_list_deployments)
 
 subparser = add_subparser(subparsers, 'create', help='create a new deployment')
