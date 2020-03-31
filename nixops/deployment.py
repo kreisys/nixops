@@ -662,6 +662,7 @@ class Deployment(object):
         if not dry_run and platform.system() != 'Linux' and os.environ.get('NIX_REMOTE') != 'daemon':
             if os.environ.get('NIX_REMOTE_SYSTEMS') == None:
                 for m in sorted(selected, key=lambda m: m.index):
+                    if debug: print >> sys.stderr, "Selected: {0}\n".format(m.name)
                     key_file = m.get_ssh_private_key_file()
                     if not key_file: raise Exception("do not know private SSH key for machine ‘{0}’".format(m.name))
                     # FIXME: Figure out the correct machine type of ‘m’ (it might not be x86_64-linux).
