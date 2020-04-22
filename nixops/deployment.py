@@ -71,6 +71,8 @@ class Deployment:
     default_description = "Unnamed NixOps network"
 
     name: Optional[str] = nixops.util.attr_property("name", None)
+    nix_exprs = nixops.util.attr_property("nixExprs", [], "json")
+    nix_path = nixops.util.attr_property("nixPath", [], 'json')
     flake_uri = nixops.util.attr_property("flakeUri", None)
     cur_flake_uri = nixops.util.attr_property("curFlakeUri", None)
     args = nixops.util.attr_property("args", {}, 'json')
