@@ -471,7 +471,6 @@ class Deployment:
             xml = subprocess.check_output(
                 cmd,
                 stderr=self.logger.log_file,
-                text=true
             )
             if DEBUG:
                 print("XML output of nix-instantiate:\n" + xml, file=sys.stderr)
